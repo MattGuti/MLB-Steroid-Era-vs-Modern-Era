@@ -1,0 +1,242 @@
+---
+title: "Hitting in the MLB: Steroid Era vs Modern Era"
+author: "Matthew Gutierrez"
+format:
+  html:
+    toc: true
+    toc-location: left
+    self-contained: true
+---
+
+## Introduction
+
+I've always been curious about whether steroids really led to better hitting during the steroid era in baseball. Specifically, I want to explore how much performance-enhancing drugs, particularly from 1994 to 2004, boosted key hitting stats compared to modern baseball (2013-2023). While power hitting and home runs surged during the steroid era, I aim to understand if steroids were a major factor or if other variables played a role. 
+
+### Primary Questions
+
+1. What is the relationship between steroid-era and modern-era hitting performance?
+   - Specifically, I expect to find that players from the steroid era had better performance metrics across all categories such as batting average, RBIs, home runs, and slugging percentage compared to modern players.
+
+2. Is there a significant difference in hitting statistics like home runs, RBIs, and batting averages between the two eras?
+
+## Data
+
+The data used for this analysis comes from the Lahman baseball database, which include player statistics for both the steroid era and the modern era. Below is the code to import and wrangle the data to fit my analysis: 
+
+```{r}
+library(Lahman)
+library(dplyr)
+library(ggplot2)
+
+# Code to load the Batting data
+data("Batting")
+
+# Code to split data into steroid era (1994-2004) and modern era (2013-2023)
+steroid_era <- Batting %>% filter(yearID >= 1994 & yearID <= 2004)
+modern_era <- Batting %>% filter(yearID >= 2013 & yearID <= 2023)
+```
+
+There is never a reason for you to print an entire data frame within a document. If you want to provide something that can show your data, you can use the `paged_table` function:
+
+```{r}
+head(steroid_era)
+head(modern_era)
+```
+
+My data came in clean as it is a loaded package within R. I used this code to manipulate the data to look at the important parts of hitting such as batting average, RBIs, home runs, and OPS (On base plus slugging), which is a commonly used power hitting statistic.
+
+```{r}
+# Code summarize key statistics for the steroid era
+steroid_summary <- steroid_era %>%
+  summarize(
+    total_AB = sum(AB, na.rm = TRUE),
+    total_H = sum(H, na.rm = TRUE),
+    total_HR = sum(HR, na.rm = TRUE),
+    total_RBI = sum(RBI, na.rm = TRUE),
+    avg_BA = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    avg_OBP = sum(H + BB + HBP, na.rm = TRUE) / sum(AB + BB + HBP + SF, na.rm = TRUE),
+    avg_SLG = sum(H + X2B + 2 * X3B + 3 * HR, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    avg_OPS = avg_OBP + avg_SLG
+  )
+
+# Code summarize key statistics for the modern era
+modern_summary <- modern_era %>%
+  summarize(
+    total_AB = sum(AB, na.rm = TRUE),
+    total_H = sum(H, na.rm = TRUE),
+    total_HR = sum(HR, na.rm = TRUE),
+    total_RBI = sum(RBI, na.rm = TRUE),
+    avg_BA = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    avg_OBP = sum(H + BB + HBP, na.rm = TRUE) / sum(AB + BB + HBP + SF, na.rm = TRUE),
+    avg_SLG = sum(H + X2B + 2 * X3B + 3 * HR, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    avg_OPS = avg_OBP + avg_SLG
+  )
+
+# Code to create a comparison data frame
+comparison <- data.frame(
+  Era = c("Steroid Era", "Modern Era"),
+  Avg_BA = c(steroid_summary$avg_BA, modern_summary$avg_BA),
+  Total_HR = c(steroid_summary$total_HR, modern_summary$total_HR),
+  Total_RBI = c(steroid_summary$total_RBI, modern_summary$total_RBI),
+  Avg_OPS = c(steroid_summary$avg_OPS, modern_summary$avg_OPS)
+)
+
+# Code to show Batting Average difference
+bar_heights <- barplot(
+  comparison$Avg_BA,
+  names.arg = comparison$Era,
+  main = "Comparison of Batting Average",
+  ylab = "Batting Average",
+  col = "lightblue"
+  )
+
+# Code to show Home Run difference
+bar_heights <- barplot(
+  comparison$Total_HR,
+  names.arg = comparison$Era,
+  main = "Comparison of Home Runs",
+  ylab = "Home Runs",
+  col = "lightgreen"
+  )
+
+# Code to show RBI difference
+bar_heights <- barplot(
+  comparison$Total_RBI,
+  names.arg = comparison$Era,
+  main = "Comparison of RBIs",
+  ylab = "RBIs",
+  col = "lightcoral"
+  )
+
+# Code to show OPS difference
+bar_heights <- barplot(
+  comparison$Avg_OPS,
+  names.arg = comparison$Era,
+  main = "Comparison of OPS",
+  ylab = "OPS",
+  col = "lightyellow"
+  )
+
+# Code to melt the data frame for easier plotting with ggplot
+library(reshape2)
+comparison_melted <- melt(comparison, id.vars = "Era")
+
+comparison_avg <- subset(comparison_melted, variable %in% c("Avg_BA", "Avg_OPS"))
+
+ggplot(comparison_avg, aes(x = Era, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Comparison of Average Statistics: Steroid Era vs. Modern Era",
+    y = "Value",
+    x = "Era"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("Avg_BA" = "lightblue", "Avg_OPS" = "lightyellow")) +
+  theme(legend.title = element_blank()) +
+  geom_text(aes(label = round(value, 2)), position = position_dodge(width = 0.9), vjust = -0.25)
+
+
+# Code used to create a ggplot bar plot comparing percentages (HR and RBI)
+comparison_total <- subset(comparison_melted, variable %in% c("Total_HR", "Total_RBI"))
+
+ggplot(comparison_total, aes(x = Era, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Comparison of Total Statistics: Steroid Era vs. Modern Era",
+    y = "Value",
+    x = "Era"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("Total_HR" = "lightgreen", "Total_RBI" = "lightcoral")) +
+  theme(legend.title = element_blank()) +
+  geom_text(aes(label = round(value, 2)), position = position_dodge(width = 0.9), vjust = -0.25)
+
+```
+
+## Methods
+
+In this project, I wanted to compare baseball stats between the “Steroid Era” and the “Modern Era.” To do this, I first summarized some key numbers for each era—like total at-bats, hits, home runs, and RBIs—using the dplyr package. I also calculated batting average (BA), on-base percentage (OBP), slugging percentage (SLG), and combined them to get OPS (on-base plus slugging). After that, I put these stats together into a comparison data frame, so I could see how each era stacked up against the other. I made some basic bar plots in R to show the differences in batting average, home runs, RBIs, and OPS between the two eras. Then, to make things look a bit better, I melted the data with reshape2 and used ggplot2 for a nicer bar chart that puts all the metrics side-by-side. I even added custom colors and labels to make the charts easier to read and understand. It was a cool way to visualize how the eras compare!
+
+## Results
+
+Looking at the bar graphs, I noticed some clear differences between the Steroid Era and the Modern Era. For batting average (BA), the Steroid Era has a slight edge, meaning players back then were a bit better at getting hits. The difference is even more obvious when it comes to power stats like total home runs—players in the Steroid Era hit way more home runs than those in the Modern Era, which fits with the era’s reputation for big hitters. The same goes for total RBIs; the higher home run counts translated into more opportunities to drive in runs. When I looked at OPS (on-base plus slugging), the Steroid Era led again, showing that players back then were not only good at reaching base but also hitting with power. Overall, these graphs show just how much more offense there was during the Steroid Era compared to today’s game.
+
+```{r}
+# Code to show Batting Average difference
+bar_heights <- barplot(
+  comparison$Avg_BA,
+  names.arg = comparison$Era,
+  main = "Comparison of Batting Average",
+  ylab = "Batting Average",
+  col = "darkgreen"
+  )
+
+# Code to show Home Run difference
+bar_heights <- barplot(
+  comparison$Total_HR,
+  names.arg = comparison$Era,
+  main = "Comparison of Home Runs",
+  ylab = "Home Runs",
+  col = "blue"
+  )
+
+# Code to show RBI difference
+bar_heights <- barplot(
+  comparison$Total_RBI,
+  names.arg = comparison$Era,
+  main = "Comparison of RBIs",
+  ylab = "RBIs",
+  col = "red"
+  )
+
+# Code to show OPS difference
+bar_heights <- barplot(
+  comparison$Avg_OPS,
+  names.arg = comparison$Era,
+  main = "Comparison of OPS",
+  ylab = "OPS",
+  col = "gold"
+  )
+
+# Code to melt the data frame for easier plotting with ggplot
+library(reshape2)
+comparison_melted <- melt(comparison, id.vars = "Era")
+
+# Code used to create a ggplot bar plot comparing percentages (BA and OPS)
+comparison_avg <- subset(comparison_melted, variable %in% c("Avg_BA", "Avg_OPS"))
+
+ggplot(comparison_avg, aes(x = Era, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Comparison of Average Statistics: Steroid Era vs. Modern Era",
+    y = "Value",
+    x = "Era"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("Avg_BA" = "darkred", "Avg_OPS" = "khaki")) +
+  theme(legend.title = element_blank()) +
+  geom_text(aes(label = round(value, 2)), position = position_dodge(width = 0.9), vjust = -0.25)
+
+# Code used to create a ggplot bar plot comparing percentages (HR and RBI)
+comparison_total <- subset(comparison_melted, variable %in% c("Total_HR", "Total_RBI"))
+
+ggplot(comparison_total, aes(x = Era, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Comparison of Total Statistics: Steroid Era vs. Modern Era",
+    y = "Value",
+    x = "Era"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("Total_HR" = "lightblue", "Total_RBI" = "red")) +
+  theme(legend.title = element_blank()) +
+  geom_text(aes(label = round(value, 2)), position = position_dodge(width = 0.9), vjust = -0.25)
+
+
+```
+
+## Discussion
+
+Looking at the differences in batting stats between the Steroid Era and the Modern Era really makes me think about how baseball has changed over the years. The fact that the Modern Era actually shows more home runs is pretty surprising, considering the Steroid Era’s reputation for power hitting. This suggests that today’s players have adapted to hit for power even without the same performance-enhancing influences. It’s fascinating to see how the game has evolved and how today’s players are finding ways to score more runs, which definitely changes the dynamics of how baseball is played.
+
+While I expected the Steroid Era to dominate in home runs, the Modern Era’s numbers back it up, showing that getting hits and driving in runs has become a key focus. The batting average difference isn’t huge, suggesting that the essence of hitting—getting on base—has remained relatively stable over time. So, even if some of these findings weren’t what I initially thought, they really paint a picture of how the game has evolved and maybe how steroids did not have as big of an effect as we think.
